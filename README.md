@@ -1,4 +1,20 @@
-# Vietnamese TTS Studio
+# Vietnamese TTS Studio 🎙️
+
+![Offline](https://img.shields.io/badge/100%25-Offline-success)
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.8%20%2B%20CUDA-ee4c2c)
+![License](https://img.shields.io/badge/Code-MIT-green)
+![Vietnamese](https://img.shields.io/badge/Language-Ti%E1%BA%BFng%20Vi%E1%BB%87t-da291c)
+
+> **Free, fully-offline Vietnamese text-to-speech (TTS) and voice cloning** with a clean local web UI + CLI.
+> Type Vietnamese text and get a `.wav`, or give a 3-10s sample to clone any voice - everything runs
+> **locally on your own NVIDIA GPU** (works on just **4GB VRAM**). No internet, no API keys, no cloud,
+> no data ever leaving your machine. Built on the **OmniVoice / KhanhTTS** models.
+>
+> Keywords: vietnamese text-to-speech, vietnamese tts, voice cloning, offline tts, local tts,
+> self-hosted, privacy, no API key, OmniVoice, KhanhTTS, FastAPI, audiobook, voice-over.
+
+---
 
 TTS tiếng Việt + nhân bản giọng nói (voice cloning), chạy **offline 100%** trên GPU local.
 Nhập văn bản tiếng Việt -> file `.wav`; hoặc đưa giọng mẫu 3-10 giây -> clone giọng đó.
@@ -7,13 +23,22 @@ Có **giao diện web** (khuyên dùng) và **CLI**.
 > **Đây là công cụ/giao diện sử dụng (consumer app), KHÔNG phải model.** Toàn bộ chất lượng
 > giọng nói là công sức của các tác giả model/engine gốc - xem mục [Ghi nhận](#ghi-nhận-credits).
 
-## Tính năng
+## ✨ Tính năng / Features
 
-- Nhập một câu hoặc **cả bài dài** -> tự cắt câu, đọc tuần tự rồi ghép thành **một file liền mạch,
-  một giọng duy nhất** (hợp cả GPU VRAM thấp như 4GB).
-- **Clone giọng** từ file mẫu hoặc **thu âm micro** ngay trên trình duyệt.
-- Quản lý **giọng mẫu** (lưu/xóa) và **lịch sử** file đã sinh (nghe lại / xóa).
-- Giao diện web sáng/tối; hoặc dùng CLI cho tự động hóa.
+- **Offline & riêng tư 100%** - không internet, không API key, không gửi dữ liệu đi đâu; audio không rời máy bạn.
+- **Tiếng Việt là trọng tâm** - dùng model KhanhTTS (fine-tune OmniVoice trên ~1.500h Việt + Anh, 24kHz).
+- **Nhân bản giọng (voice cloning)** - clone giọng bất kỳ từ mẫu 3-10 giây (tải lên hoặc **thu mic ngay trên web**).
+- **Đọc văn bản dài** - tự cắt câu, sinh từng đoạn rồi ghép thành **một file liền mạch, một giọng duy nhất**; chạy được cả trên **4GB VRAM**.
+- **Tốc độ đọc chỉnh được** - thanh kéo `0.5x - 2.0x` (chậm rãi cho thơ/tình cảm, nhanh gọn cho tin tức).
+- **Giao diện web sạch (FastAPI)** - sáng/tối, side-nav hướng dẫn, lịch sử nghe lại ngay tại dòng, quản lý giọng mẫu (lưu/xóa). Kèm **CLI** để tự động hóa.
+
+## 🎯 Dùng để làm gì / Use cases
+
+- Đọc **sách nói / audiobook** tiếng Việt.
+- **Lồng tiếng** video, YouTube, TikTok, e-learning.
+- Đọc thông báo, kịch bản, bản tin tự động.
+- **Clone giọng** cho nhân vật / thương hiệu, hoặc giữ giọng nhất quán cho cả series.
+- Bất cứ ai cần TTS tiếng Việt mà **không muốn phụ thuộc dịch vụ cloud trả phí / lộ dữ liệu**.
 
 ## Yêu cầu
 
@@ -45,14 +70,15 @@ uv run python web_server.py          # hoặc double-click start-ui.bat (Windows
 Trình duyệt tự mở tại `http://127.0.0.1:7860` - **chỉ máy này truy cập được**, không mở ra mạng.
 Lần bấm **Đọc** đầu tiên chờ 30-60 giây tải model; các lần sau gần như tức thì (model giữ trong VRAM).
 
+Giao diện chia 2 phần: **side nav hướng dẫn bên trái** + **màn hình chính bên phải**.
+
 **Tab "Tạo giọng nói":**
 - Dán văn bản bất kỳ - một câu hay cả bài đều được. Bài dài tự cắt câu, đọc lần lượt (có thanh
   tiến độ "đang đọc đoạn 3/12...") rồi ghép thành một file liền mạch.
 - Muốn clone giọng: mở khối **Giọng mẫu** - chọn file có sẵn trong `refs/`, tải file lên, hoặc
   **thu âm bằng micro**. Nên gõ *Lời mẫu* (đúng câu trong file mẫu) để đỡ tốn VRAM. Bấm
   **Lưu vào refs/** để giữ giọng dùng lần sau, hoặc nút thùng rác để xóa giọng mẫu.
-- **Tùy chọn nâng cao**: chỉnh **tốc độ đọc** (rất chậm -> rất nhanh - hợp đoạn tình cảm, đạo lý
-  cần đọc chậm rãi), số bước, hoặc bật *Dùng CPU*.
+- **Tùy chọn nâng cao**: thanh kéo **tốc độ đọc** (0.5x-2.0x), **số bước** (8-32), hoặc bật *Dùng CPU*.
 - Hết VRAM giữa chừng? Phần đã đọc xong vẫn được lưu (`..._partial.wav`); bật **Dùng CPU** hoặc
   giảm số bước rồi đọc lại.
 - Nút **Giải phóng VRAM**: trả VRAM cho việc khác mà không cần tắt app.
@@ -69,8 +95,8 @@ uv run python run.py --text "Xin chào các bạn, hôm nay trời đẹp quá."
 uv run python run.py --text "Câu đọc bằng giọng mẫu." --ref refs/mau.wav \
   --ref-text "lời thoại có trong mau.wav" --out outputs/clone.wav
 
-# Ép chạy CPU khi hết VRAM
-uv run python run.py --text "..." --cpu
+# Đọc chậm rãi + ép CPU khi hết VRAM
+uv run python run.py --text "..." --speed 0.8 --cpu
 ```
 
 Tham số `run.py`: `--text` `--out` `--ref` `--ref-text` `--steps`(16) `--speed`(1.0) `--cpu`.
@@ -82,7 +108,7 @@ vietnamese-tts-studio/
 ├── web_server.py         # Backend FastAPI - phục vụ web + API (giao diện chính)
 ├── web/                  # Frontend tĩnh (HTML/CSS/JS) + font Be Vietnam Pro
 ├── run.py                # CLI (terminal)
-├── tts_engine.py         # Lõi model dùng chung (load/unload/generate)
+├── tts_engine.py         # Lõi model dùng chung (load/unload/generate, đặt HF_HOME)
 ├── text_splitter.py      # Cắt văn bản dài thành câu (tiếng Việt)
 ├── long_text.py          # Pipeline đọc văn bản dài (ghép đoạn, giữ 1 giọng)
 ├── history.py            # Đặt tên file output + metadata + lịch sử

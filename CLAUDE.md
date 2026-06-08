@@ -10,8 +10,11 @@ Mục tiêu: nhập văn bản tiếng Việt -> sinh file `.wav`; hoặc đưa 
 
 - Đây là **project sử dụng** (consumer), KHÔNG phải train model. Chỉ nạp weights có sẵn rồi inference.
 - Engine = thư viện `omnivoice` (cài qua pip). Weights = tải từ HuggingFace.
-- Hai entry point: `app.py` (giao diện web Gradio, khuyên dùng - mở qua `start-ui.bat`)
-  và `run.py` (CLI argparse). Cả hai gọi lõi chung `tts_engine.py`.
+- **Entry chính: `web_server.py`** (giao diện web FastAPI + frontend tĩnh trong `web/`, mở qua
+  `start-ui.bat`). Ngoài ra có `run.py` (CLI argparse). Bản Gradio cũ `app.py` giữ làm tùy chọn,
+  KHÔNG còn là UI chính. Tất cả gọi lõi chung `tts_engine.py`.
+- Tính năng hiện có: TTS, clone giọng (file/mic), đọc văn bản dài (tự cắt + ghép 1 giọng), tốc độ
+  đọc (slider 0.5-2.0x), quản lý giọng mẫu (lưu đúng tên/xóa), lịch sử (nghe inline/xóa), sáng/tối.
 
 ## Resource / Link đang dùng
 
@@ -31,8 +34,10 @@ Mục tiêu: nhập văn bản tiếng Việt -> sinh file `.wav`; hoặc đưa 
 - Python **3.12.0** (trong `.venv`) - KHÔNG dùng Python 3.14 hệ thống (PyTorch chưa hỗ trợ 3.14).
 - PyTorch **2.8.0+cu128** + torchaudio 2.8.0+cu128 (CUDA 12.8).
 - omnivoice **0.1.5**, transformers 5.10.2, numpy 2.4.6, soundfile 0.14.0.
-- gradio **6.16.0** (pin đúng bản; cài bare vào .venv: `UV_LINK_MODE=copy uv pip install "gradio==6.16.0"`.
-  Project KHÔNG có pyproject.toml/uv.lock - đừng tự thêm, đó là quyết định riêng cần hỏi user).
+- Web UI chính: **fastapi + uvicorn[standard] + python-multipart** (cài bare vào .venv qua
+  `UV_LINK_MODE=copy uv pip install ...`). Frontend là HTML/CSS/JS thuần + font Be Vietnam Pro (local, offline).
+- gradio **6.16.0** (chỉ cho bản UI cũ `app.py`, tùy chọn). Project KHÔNG có pyproject.toml/uv.lock -
+  đừng tự thêm, đó là quyết định riêng cần hỏi user.
 - Package manager: **uv** (không dùng pip/npm trực tiếp).
 
 ## RÀNG BUỘC BẮT BUỘC (lesson learned - đừng lặp lại lỗi)
@@ -53,39 +58,40 @@ Mục tiêu: nhập văn bản tiếng Việt -> sinh file `.wav`; hoặc đưa 
 
 ```bash
 cd /d/source-code/omnivoice-vietnamese
-uv run python app.py                                                        # UI web (hoặc double-click start-ui.bat)
+uv run python web_server.py                                                 # UI web FastAPI (hoặc double-click start-ui.bat)
 uv run python run.py --text "Câu tiếng Việt." --out outputs/a.wav          # TTS cơ bản (CLI)
 uv run python run.py --text "..." --ref refs/mau.wav --ref-text "..." --out outputs/clone.wav  # clone giọng
-uv run python run.py --text "..." --cpu                                     # ép CPU khi hết VRAM
+uv run python run.py --text "..." --speed 0.8 --cpu                         # đọc chậm + ép CPU khi hết VRAM
 uv run python -m unittest tests.test_text_splitter                          # unit test (không cần GPU)
 uv run python tests/smoke_e2e.py                                            # smoke e2e (GPU, model thật, không mock)
 ```
 
-Tham số `run.py`: `--text --out --ref --ref-text --steps(16) --cpu`.
-UI bind `127.0.0.1:7860` (chỉ máy này truy cập được), tuyệt đối KHÔNG bật `share=True`.
+Tham số `run.py`: `--text --out --ref --ref-text --steps(16) --speed(1.0) --cpu`.
+Web bind `127.0.0.1:7860` (chỉ máy này truy cập được), tuyệt đối KHÔNG bật `share=True`/`0.0.0.0`.
+API chính: `POST /api/generate` (multipart), `/api/refs` (GET/DELETE), `/api/save-ref`, `/api/history`,
+`/api/audio/{name}`, `/api/progress`, `/api/unload`. Chống path traversal ở mọi chỗ nhận tên file.
 
 ## Cấu trúc
 
 ```
-omnivoice-vietnamese/
-├── .venv/                # Python 3.12 + torch + omnivoice + gradio (~8GB) - KHÔNG commit
+omnivoice-vietnamese/  (repo GitHub: vietnamese-tts-studio)
+├── .venv/                # Python 3.12 + torch + omnivoice + fastapi (~8GB) - KHÔNG commit
 ├── .cache/huggingface/   # model weights (~3.1GB) - KHÔNG commit, xóa được
-├── outputs/              # file .wav sinh ra + sidecar .json metadata cùng tên
-├── refs/                 # giọng mẫu để clone (UI có nút "Lưu vào refs/")
+├── outputs/              # file .wav sinh ra + sidecar .json metadata - gitignore
+├── refs/                 # giọng mẫu để clone - gitignore (file cá nhân)
+├── web/                  # FRONTEND: index.html, styles.css, app.js, recorder.js, fonts/*.ttf
 ├── tests/                # test_text_splitter.py (GPU-free) + smoke_e2e.py (GPU thật)
-├── docs/adr/             # quyết định kiến trúc (0001 = tự lấy mẫu cho văn bản dài)
-├── plans/                # plan implementation (260608-0054-gradio-web-ui)
+├── docs/                 # adr/0001 (tự lấy mẫu) + project-changelog.md
+├── plans/                # plan nội bộ - gitignore, KHÔNG track
+├── web_server.py         # ENTRY CHÍNH: FastAPI serve web/ + API generate/refs/history/...
 ├── run.py                # CLI mỏng gọi tts_engine
-├── app.py                # UI Gradio: tab "Tạo giọng nói" (< 200 dòng)
-├── app_history_tab.py    # UI Gradio: tab "Lịch sử" (tách riêng cho gọn)
-├── tts_engine.py         # lõi model: HF_HOME, load/unload/generate, singleton `engine`
-├── text_splitter.py      # cắt văn bản tiếng Việt thành đoạn (viết tắt, số thập phân...)
-├── long_text.py          # pipeline văn bản dài: tự lấy mẫu (ADR 0001), ghép đoạn, partial
-├── history.py            # đặt tên file output, sidecar JSON, liệt kê/xóa lịch sử
-├── start-ui.bat          # double-click mở UI
-├── CONTEXT.md            # glossary thuật ngữ domain (giọng mẫu, đoạn, tự lấy mẫu...)
-├── README.md             # hướng dẫn cho người dùng
-└── CLAUDE.md             # file này (context cho agent)
+├── tts_engine.py         # lõi model: HF_HOME (đặt đầu file!), load/unload/generate, singleton `engine`
+├── text_splitter.py      # cắt văn bản tiếng Việt thành đoạn (né viết tắt, số thập phân...)
+├── long_text.py          # pipeline văn bản dài: tự lấy mẫu (ADR 0001), ghép đoạn, partial, speed
+├── history.py            # đặt tên file output (giữ tên gốc), sidecar JSON, liệt kê/xóa
+├── app.py app_theme.py app_history_tab.py   # bản UI Gradio CŨ (tùy chọn, không phải UI chính)
+├── start-ui.bat          # double-click chạy web_server.py
+├── CONTEXT.md  README.md  CLAUDE.md  LICENSE  .gitignore
 ```
 
 ## Cảnh báo / việc còn mở
