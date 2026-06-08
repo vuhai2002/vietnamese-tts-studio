@@ -1,0 +1,105 @@
+# CLAUDE.md - Context cho AI agent
+
+> File này để AI agent (Claude Code...) đọc đầu tiên, hiểu nhanh project làm gì, dùng
+> resource nào, và các ràng buộc BẮT BUỘC phải nhớ. Người dùng đọc `README.md` để biết cách dùng.
+
+## Project này là gì
+
+TTS (text-to-speech) + voice cloning **tiếng Việt**, chạy **offline 100% trên máy** (GPU local).
+Mục tiêu: nhập văn bản tiếng Việt -> sinh file `.wav`; hoặc đưa giọng mẫu 3-10s -> clone giọng đó.
+
+- Đây là **project sử dụng** (consumer), KHÔNG phải train model. Chỉ nạp weights có sẵn rồi inference.
+- Engine = thư viện `omnivoice` (cài qua pip). Weights = tải từ HuggingFace.
+- Hai entry point: `app.py` (giao diện web Gradio, khuyên dùng - mở qua `start-ui.bat`)
+  và `run.py` (CLI argparse). Cả hai gọi lõi chung `tts_engine.py`.
+
+## Resource / Link đang dùng
+
+| Thành phần | Nguồn |
+|---|---|
+| **Model đang dùng** (weights tiếng Việt) | https://huggingface.co/kjanh/KhanhTTS-OmniVoice |
+| Engine code (thư viện `omnivoice`) | https://github.com/k2-fsa/OmniVoice + PyPI `omnivoice` |
+| Model gốc (đa ngôn ngữ, KhanhTTS fine-tune từ đây) | https://huggingface.co/k2-fsa/OmniVoice |
+| Model VN thay thế (nếu cần so sánh) | https://huggingface.co/splendor1811/omnivoice-vietnamese |
+| App desktop liên quan (cùng hệ OmniVoice) | https://github.com/debpalash/OmniVoice-Studio |
+
+- Model id hardcode trong `run.py`: `MODEL_ID = "kjanh/KhanhTTS-OmniVoice"`.
+- KhanhTTS = fine-tune của OmniVoice trên ~1.500h tiếng Việt + Anh; output 24000 Hz; backbone Qwen3-0.6B.
+
+## Tech stack (phiên bản đã cài, đã verify chạy được)
+
+- Python **3.12.0** (trong `.venv`) - KHÔNG dùng Python 3.14 hệ thống (PyTorch chưa hỗ trợ 3.14).
+- PyTorch **2.8.0+cu128** + torchaudio 2.8.0+cu128 (CUDA 12.8).
+- omnivoice **0.1.5**, transformers 5.10.2, numpy 2.4.6, soundfile 0.14.0.
+- gradio **6.16.0** (pin đúng bản; cài bare vào .venv: `UV_LINK_MODE=copy uv pip install "gradio==6.16.0"`.
+  Project KHÔNG có pyproject.toml/uv.lock - đừng tự thêm, đó là quyết định riêng cần hỏi user).
+- Package manager: **uv** (không dùng pip/npm trực tiếp).
+
+## RÀNG BUỘC BẮT BUỘC (lesson learned - đừng lặp lại lỗi)
+
+1. **HF cache phải nằm trong project.** `tts_engine.py` tự set `HF_HOME = ./.cache/huggingface`
+   ở KHỐI ĐẦU FILE, TRƯỚC khi import omnivoice. Mọi entrypoint (run.py, app.py) phải
+   `import tts_engine` trước khi đụng model. Mục đích: model không tải ra `C:\Users\...\.cache`
+   mặc định -> dễ xóa, không vương vãi.
+2. **GPU yếu: RTX 3050 Ti Laptop, chỉ 4GB VRAM.**
+   - Đọc câu ngắn; khi clone luôn truyền `--ref-text` để KHÔNG phải load Whisper (đỡ tốn VRAM).
+   - Nếu `CUDA out of memory` -> chạy `--cpu` (chậm nhưng chắc).
+3. **uv install dùng `UV_LINK_MODE=copy`** (cache uv ở ổ C:, venv ở D: -> khác filesystem,
+   không hardlink được; copy trên đĩa thật thì nhanh, vô hại).
+4. **Encoding:** chạy script nên đặt `PYTHONUTF8=1`; `run.py` đã `sys.stdout.reconfigure(utf-8)`
+   để in tiếng Việt không lỗi trên console Windows.
+
+## Cách chạy (tóm tắt - chi tiết xem README.md)
+
+```bash
+cd /d/source-code/omnivoice-vietnamese
+uv run python app.py                                                        # UI web (hoặc double-click start-ui.bat)
+uv run python run.py --text "Câu tiếng Việt." --out outputs/a.wav          # TTS cơ bản (CLI)
+uv run python run.py --text "..." --ref refs/mau.wav --ref-text "..." --out outputs/clone.wav  # clone giọng
+uv run python run.py --text "..." --cpu                                     # ép CPU khi hết VRAM
+uv run python -m unittest tests.test_text_splitter                          # unit test (không cần GPU)
+uv run python tests/smoke_e2e.py                                            # smoke e2e (GPU, model thật, không mock)
+```
+
+Tham số `run.py`: `--text --out --ref --ref-text --steps(16) --cpu`.
+UI bind `127.0.0.1:7860` (chỉ máy này truy cập được), tuyệt đối KHÔNG bật `share=True`.
+
+## Cấu trúc
+
+```
+omnivoice-vietnamese/
+├── .venv/                # Python 3.12 + torch + omnivoice + gradio (~8GB) - KHÔNG commit
+├── .cache/huggingface/   # model weights (~3.1GB) - KHÔNG commit, xóa được
+├── outputs/              # file .wav sinh ra + sidecar .json metadata cùng tên
+├── refs/                 # giọng mẫu để clone (UI có nút "Lưu vào refs/")
+├── tests/                # test_text_splitter.py (GPU-free) + smoke_e2e.py (GPU thật)
+├── docs/adr/             # quyết định kiến trúc (0001 = tự lấy mẫu cho văn bản dài)
+├── plans/                # plan implementation (260608-0054-gradio-web-ui)
+├── run.py                # CLI mỏng gọi tts_engine
+├── app.py                # UI Gradio: tab "Tạo giọng nói" (< 200 dòng)
+├── app_history_tab.py    # UI Gradio: tab "Lịch sử" (tách riêng cho gọn)
+├── tts_engine.py         # lõi model: HF_HOME, load/unload/generate, singleton `engine`
+├── text_splitter.py      # cắt văn bản tiếng Việt thành đoạn (viết tắt, số thập phân...)
+├── long_text.py          # pipeline văn bản dài: tự lấy mẫu (ADR 0001), ghép đoạn, partial
+├── history.py            # đặt tên file output, sidecar JSON, liệt kê/xóa lịch sử
+├── start-ui.bat          # double-click mở UI
+├── CONTEXT.md            # glossary thuật ngữ domain (giọng mẫu, đoạn, tự lấy mẫu...)
+├── README.md             # hướng dẫn cho người dùng
+└── CLAUDE.md             # file này (context cho agent)
+```
+
+## Cảnh báo / việc còn mở
+
+- **License cần kiểm tra trước khi DÙNG THƯƠNG MẠI:** model card KhanhTTS ghi Apache-2.0 nhưng
+  KHÔNG nói rõ license của dataset train. Model VN khác (splendor1811) train trên dataset
+  CC-BY-NC-SA (cấm thương mại). => Nếu định kiếm tiền từ giọng sinh ra, phải xác minh/liên hệ tác giả trước.
+- Cảnh báo "symlink not supported" lúc tải model là vô hại (Windows tắt symlink) - chỉ tốn thêm disk.
+- Biểu cảm phi ngôn ngữ (`[laughter]`, `[sigh]`...) là tính năng của OmniVoice gốc, CHƯA verify
+  hoạt động tốt trên bản tiếng Việt KhanhTTS - cần test thực tế rồi nghe.
+- **"Mô tả giọng" (voice design / tham số `instruct`: nam/nữ, tuổi, cao độ...) KHÔNG dùng được
+  trên KhanhTTS** - đã test 2026-06-08: giới tính nữ/nam ra f0 ~126/130Hz (không đổi giọng); cao độ
+  có đổi nhẹ (+47Hz) nhưng không tạo giọng mới hữu ích. Đã gỡ khỏi UI theo yêu cầu user. ĐỪNG thêm
+  lại. Muốn đổi giọng (nam/nữ/người cụ thể) -> CHỈ có cách clone bằng file giọng mẫu trong `refs/`.
+- Chưa có: batch nhiều file. (Web UI + đọc văn bản dài đã xong 2026-06-08, xem `docs/project-changelog.md`.)
+- Giọng mặc định KHÔNG ổn định giữa các lần generate -> văn bản dài dùng cơ chế "tự lấy mẫu"
+  (đoạn 1 làm giọng mẫu cho các đoạn sau) - xem `docs/adr/0001`. ĐỪNG bỏ cơ chế này khi refactor.

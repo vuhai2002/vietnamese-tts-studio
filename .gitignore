@@ -1,0 +1,16 @@
+# Moi truong + cache + ket qua + file ca nhan - khong commit, deu tai/sinh lai duoc
+.venv/
+.cache/
+outputs/
+refs/
+*.wav
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# File tam khi phat trien (screenshot kiem tra UI, script test nhanh)
+_check_*.py
+_ui_*.png
+
+# Ghi chu noi bo cua AI agent - khong public
+.claude/
