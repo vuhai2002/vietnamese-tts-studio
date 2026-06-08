@@ -100,8 +100,6 @@ Dự án này chỉ là lớp giao diện/công cụ. Mọi công sức tạo ra
   - tác giả **kjanh** (fine-tune ~1.500h tiếng Việt + Anh, output 24kHz, backbone Qwen3-0.6B). License: Apache-2.0.
 - **Engine / model gốc:** [`k2-fsa/OmniVoice`](https://github.com/k2-fsa/OmniVoice)
   ([HuggingFace](https://huggingface.co/k2-fsa/OmniVoice)) - **k2-fsa / Xiaomi Corp** (tác giả Han Zhu). License: Apache-2.0.
-- **Model VN thay thế (tham khảo):** [`splendor1811/omnivoice-vietnamese`](https://huggingface.co/splendor1811/omnivoice-vietnamese).
-- **App desktop cùng hệ OmniVoice:** [OmniVoice-Studio](https://github.com/debpalash/OmniVoice-Studio).
 - **Font:** [Be Vietnam Pro](https://fonts.google.com/specimen/Be+Vietnam+Pro) (SIL Open Font License).
 
 ## License
