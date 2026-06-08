@@ -67,10 +67,12 @@ class TtsEngine:
             self.model = OmniVoice.from_pretrained(MODEL_ID, device_map=device, dtype=dtype)
             self._device = device
 
-    def generate_one(self, text: str, ref_audio=None, ref_text=None, steps: int = 16):
+    def generate_one(self, text: str, ref_audio=None, ref_text=None, steps: int = 16,
+                     speed: float | None = None):
         """Sinh âm thanh cho MỘT đoạn text, trả về mảng 1-D (24000 Hz).
 
         ref_audio: đường dẫn file giọng mẫu 3-10s (clone giọng); ref_text: lời thoại trong mẫu.
+        speed: tốc độ đọc (>1 nhanh, <1 chậm); None/1.0 = mặc định. Áp cho cả giọng mặc định lẫn clone.
         Giữ fallback TypeError: phòng khi phiên bản omnivoice khác tên tham số num_step.
         """
         if self.model is None:
@@ -80,6 +82,8 @@ class TtsEngine:
             kwargs["ref_audio"] = ref_audio
         if ref_text:
             kwargs["ref_text"] = ref_text
+        if speed and speed != 1.0:
+            kwargs["speed"] = speed
         try:
             audio = self.model.generate(**kwargs)
         except TypeError:

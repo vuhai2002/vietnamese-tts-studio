@@ -42,8 +42,10 @@ def _is_oom(exc: Exception) -> bool:
 
 def generate_long(text: str, ref_audio: str | None = None, ref_text: str | None = None,
                   steps: int = 16, device: str = "cpu", dtype=torch.float32,
-                  progress=None) -> dict:
+                  progress=None, speed: float | None = None) -> dict:
     """Sinh âm thanh cho văn bản (1 câu hay nhiều đoạn đều đi chung đường này).
+
+    speed: tốc độ đọc áp cho TỪNG đoạn -> cả bài cùng tốc độ.
 
     Trả về dict:
     - audio:     mảng 1-D 24000 Hz đã ghép, hoặc None nếu chưa sinh được đoạn nào
@@ -69,7 +71,7 @@ def generate_long(text: str, ref_audio: str | None = None, ref_text: str | None 
                 progress(i / len(chunks), desc=f"Đang đọc đoạn {i + 1}/{len(chunks)}...")
             try:
                 audio = engine.generate_one(chunk, ref_audio=active_ref_audio,
-                                            ref_text=active_ref_text, steps=steps)
+                                            ref_text=active_ref_text, steps=steps, speed=speed)
             except (torch.cuda.OutOfMemoryError, RuntimeError) as exc:
                 if _is_oom(exc):
                     failed_at = i + 1

@@ -165,6 +165,7 @@ $("goBtn").onclick = async () => {
   fd.append("text", text);
   fd.append("ref_text", $("refText").value);
   fd.append("steps", $("steps").value);
+  fd.append("speed", $("speedSel").value);
   fd.append("use_cpu", $("useCpu").checked);
   if (currentFile) fd.append("ref_file", currentFile, currentFile.name || "ref.wav");
   else fd.append("ref_name", $("refSelect").value);

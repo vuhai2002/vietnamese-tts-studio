@@ -1,5 +1,20 @@
 # Project Changelog
 
+## 2026-06-08 - Web UI riêng (FastAPI) + tốc độ đọc + quản lý giọng mẫu
+
+**Thay đổi lớn:**
+- Thay giao diện Gradio bằng **web riêng**: backend FastAPI (`web_server.py`) + frontend tĩnh
+  (`web/`: HTML/CSS/JS, font Be Vietnam Pro, tông slate + xanh dương, sáng/tối). Lõi tái dùng nguyên.
+- **Tốc độ đọc**: dropdown 5 mức (rất chậm -> rất nhanh) qua tham số `speed`, áp cả giọng mặc định
+  lẫn clone + văn bản dài; CLI thêm `--speed`.
+- **Quản lý giọng mẫu**: lưu giữ ĐÚNG tên file gốc (trùng tự thêm `-2`), nút xóa giọng mẫu, nút bỏ
+  chọn, chặn lưu trùng nhiều lần cùng một file.
+- **Lịch sử**: bấm play phát ngay tại dòng (bỏ thanh audio tách rời ở cuối).
+
+**Gỡ bỏ:**
+- "Mô tả giọng" (voice design / `instruct`): đã test, model KhanhTTS tiếng Việt không đổi giọng theo
+  mô tả (chỉ cao độ ăn nhẹ) -> gỡ khỏi UI. Xem cảnh báo trong `CLAUDE.md`.
+
 ## 2026-06-08 - Giao diện web Gradio + đọc văn bản dài
 
 **Thêm mới:**

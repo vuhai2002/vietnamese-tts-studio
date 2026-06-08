@@ -14,3 +14,6 @@ _ui_*.png
 
 # Ghi chu noi bo cua AI agent - khong public
 .claude/
+
+# Ke hoach phat trien noi bo - khong public
+plans/

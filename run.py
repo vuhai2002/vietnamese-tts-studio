@@ -27,6 +27,8 @@ def build_parser():
                    help="Loi thoai trong file mau (NEN nhap tay de do ton VRAM cho Whisper)")
     p.add_argument("--steps", type=int, default=16,
                    help="So buoc diffusion: it=nhanh/nhe (16), nhieu=muot hon (32)")
+    p.add_argument("--speed", type=float, default=1.0,
+                   help="Toc do doc: <1 cham, >1 nhanh (mac dinh 1.0)")
     p.add_argument("--cpu", action="store_true", help="Ep chay bang CPU (cham nhung khong gioi han VRAM)")
     return p
 
@@ -50,6 +52,7 @@ def main():
         ref_audio=args.ref,
         ref_text=args.ref_text if args.ref else None,
         steps=args.steps,
+        speed=args.speed,
     )
 
     out_path = Path(args.out)

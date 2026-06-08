@@ -132,6 +132,7 @@ async def api_generate(
     ref_name: str = Form(""),
     ref_text: str = Form(""),
     steps: int = Form(16),
+    speed: float = Form(1.0),
     use_cpu: bool = Form(False),
     ref_file: UploadFile | None = File(None),
 ):
@@ -157,7 +158,7 @@ async def api_generate(
         result = await run_in_threadpool(
             long_text.generate_long, text, ref_audio,
             (ref_text.strip() or None) if ref_audio else None,
-            int(steps), device, dtype, _set_progress,
+            int(steps), device, dtype, _set_progress, float(speed),
         )
         if result["audio"] is None:
             raise HTTPException(status_code=500,
@@ -168,7 +169,7 @@ async def api_generate(
         sf.write(str(wav_path), result["audio"], SAMPLE_RATE)
         history.write_sidecar(json_path, {
             "text": text, "ref_voice": ref_audio, "ref_text": ref_text.strip() or None,
-            "steps": int(steps), "device": device,
+            "steps": int(steps), "speed": float(speed), "device": device,
             "created": datetime.now().isoformat(timespec="seconds"),
             "sample_rate": SAMPLE_RATE, "n_chunks": result["n_chunks"],
             "partial": result["partial"], "failed_at": result["failed_at"], "wav": wav_path.name,

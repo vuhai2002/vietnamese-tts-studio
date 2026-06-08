@@ -51,6 +51,8 @@ Lần bấm **Đọc** đầu tiên chờ 30-60 giây tải model; các lần sa
 - Muốn clone giọng: mở khối **Giọng mẫu** - chọn file có sẵn trong `refs/`, tải file lên, hoặc
   **thu âm bằng micro**. Nên gõ *Lời mẫu* (đúng câu trong file mẫu) để đỡ tốn VRAM. Bấm
   **Lưu vào refs/** để giữ giọng dùng lần sau, hoặc nút thùng rác để xóa giọng mẫu.
+- **Tùy chọn nâng cao**: chỉnh **tốc độ đọc** (rất chậm -> rất nhanh - hợp đoạn tình cảm, đạo lý
+  cần đọc chậm rãi), số bước, hoặc bật *Dùng CPU*.
 - Hết VRAM giữa chừng? Phần đã đọc xong vẫn được lưu (`..._partial.wav`); bật **Dùng CPU** hoặc
   giảm số bước rồi đọc lại.
 - Nút **Giải phóng VRAM**: trả VRAM cho việc khác mà không cần tắt app.
@@ -71,7 +73,7 @@ uv run python run.py --text "Câu đọc bằng giọng mẫu." --ref refs/mau.w
 uv run python run.py --text "..." --cpu
 ```
 
-Tham số `run.py`: `--text` `--out` `--ref` `--ref-text` `--steps`(16) `--cpu`.
+Tham số `run.py`: `--text` `--out` `--ref` `--ref-text` `--steps`(16) `--speed`(1.0) `--cpu`.
 
 ## Cấu trúc
 
