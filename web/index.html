@@ -97,14 +97,18 @@
         </summary>
         <div class="details-body">
           <div>
-            <label class="label">Tốc độ đọc</label>
-            <select id="speedSel">
-              <option value="0.7">Rất chậm</option>
-              <option value="0.85">Chậm</option>
-              <option value="1.0" selected>Bình thường</option>
-              <option value="1.2">Nhanh</option>
-              <option value="1.4">Rất nhanh</option>
-            </select>
+            <label class="label">Tốc độ đọc <span class="range-val" id="speedVal">1.00x</span></label>
+            <div class="range-wrap">
+              <span class="hint">0.5x</span>
+              <input type="range" id="speedSel" min="0.5" max="2" step="0.05" value="1">
+              <span class="hint">2.0x</span>
+            </div>
+            <p class="hint speed-tips">
+              <b>0.7-0.8x</b> chậm rãi (thơ, tình cảm, đạo lý)&nbsp; ·&nbsp;
+              <b>1.0x</b> bình thường&nbsp; ·&nbsp;
+              <b>1.2-1.4x</b> nhanh gọn (tin tức, tóm tắt)&nbsp; ·&nbsp;
+              <b>&gt;1.5x</b> rất nhanh, có thể kém tự nhiên
+            </p>
           </div>
           <div>
             <label class="label">Số bước <span class="hint">(ít: nhanh - nhiều: mượt hơn)</span></label>

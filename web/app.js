@@ -45,6 +45,9 @@ $("text").addEventListener("input", (e) => {
   $("counter").textContent = `${e.target.value.length} ký tự`;
 });
 $("steps").addEventListener("input", (e) => { $("stepsVal").textContent = e.target.value; });
+$("speedSel").addEventListener("input", (e) => {
+  $("speedVal").textContent = parseFloat(e.target.value).toFixed(2) + "x";
+});
 
 /* ---------- Giọng mẫu: dropdown + tải lên + kéo thả + thu âm ---------- */
 async function loadRefs() {

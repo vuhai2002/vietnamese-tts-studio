@@ -138,8 +138,10 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 19p
   border-radius: 50%; background: var(--accent); cursor: pointer; border: 3px solid var(--surface);
   box-shadow: var(--shadow-sm); transition: transform .12s; }
 input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
-.range-val { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 26px; text-align: center;
+.range-val { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 26px;
   color: var(--accent); }
+.speed-tips { margin-top: 9px; line-height: 1.8; }
+.speed-tips b { color: var(--text-2); }
 
 /* Switch CPU */
 .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; font-weight: 500; }
