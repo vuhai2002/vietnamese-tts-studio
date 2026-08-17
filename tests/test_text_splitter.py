@@ -154,6 +154,52 @@ class TestEdgeCases(unittest.TestCase):
         result = split_text("Một câu duy nhất.")
         self.assertIsInstance(result, list)
 
+    def test_boundaries_para_vs_sent(self):
+        """Câu cuối mỗi đoạn phải là ranh giới PARA, các câu giữa đoạn là SENT."""
+        from text_splitter import (BOUNDARY_PARA, BOUNDARY_SENT,
+                                   split_text_with_boundaries)
+        # Câu phải đủ dài (>= min_chars mặc định 30) để không bị _merge_short gộp lại.
+        text = ("Đây là câu thứ nhất của đoạn văn đầu tiên. "
+                "Đây là câu thứ hai kết thúc đoạn văn đầu tiên.\n\n"
+                "Đây là câu thứ nhất của đoạn văn thứ hai. "
+                "Đây là câu thứ hai kết thúc đoạn văn thứ hai.")
+        pairs = split_text_with_boundaries(text)
+        self.assertEqual(len(pairs), 4, pairs)
+        kinds = [b for _, b in pairs]
+        # Câu 1 và 3 nằm giữa đoạn -> SENT; câu 2 và 4 kết thúc đoạn -> PARA.
+        self.assertEqual(kinds, [BOUNDARY_SENT, BOUNDARY_PARA,
+                                 BOUNDARY_SENT, BOUNDARY_PARA])
+
+    def test_split_text_still_returns_plain_strings(self):
+        """split_text() cũ phải giữ nguyên chữ ký (list chuỗi) - không phá code/test đang dùng."""
+        result = split_text("Câu một. Câu hai dài hơn một chút cho đủ ngưỡng gộp.")
+        self.assertTrue(all(isinstance(x, str) for x in result), result)
+
+    def test_forced_split_marks_minor_boundary(self):
+        """Câu quá dài bị bẻ giữa chừng -> mảnh đầu là MINOR (nghỉ ngắn), mảnh cuối giữ ranh giới thật."""
+        from text_splitter import (BOUNDARY_MINOR, BOUNDARY_PARA,
+                                   split_text_with_boundaries)
+        long_sentence = "một hai ba bốn năm sáu bảy tám chín mười, " * 12 + "kết thúc."
+        pairs = split_text_with_boundaries(long_sentence, max_chars=120)
+        kinds = [b for _, b in pairs]
+        self.assertGreater(len(pairs), 1, "cau dai phai bi be nho")
+        self.assertIn(BOUNDARY_MINOR, kinds, kinds)
+        self.assertEqual(kinds[-1], BOUNDARY_PARA, kinds)
+
+    def test_ellipsis_char_splits_like_three_dots(self):
+        """Ký tự "…" (U+2026) phải cắt câu y như "..." - văn bản dán từ Word hay dùng nó.
+
+        Thiếu ký tự này thì cả đoạn dồn thành MỘT câu quá dài -> model sinh một hơi -> rè + ngắt sai.
+        """
+        src = ("Anh ấy nói… rồi im lặng rất lâu… không ai hiểu chuyện gì… "
+               "mọi người chỉ nhìn nhau… và chờ đợi rất lâu sau đó.")
+        chunks = split_text(src)
+        self.assertGreater(len(chunks), 1, "dau … phai cat duoc cau")
+        # Cắt bằng "…" phải ra cùng số đoạn với cắt bằng "..."
+        self.assertEqual(len(chunks), len(split_text(src.replace("…", "..."))))
+        # Không được nuốt mất dấu "…"
+        self.assertIn("…", "".join(chunks))
+
 
 if __name__ == "__main__":
     unittest.main()

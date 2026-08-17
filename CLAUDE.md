@@ -123,10 +123,20 @@ omnivoice-vietnamese/  (repo GitHub: vietnamese-tts-studio)
   - **ĐỪNG cắt câu theo dấu phẩy.** Đã thử 2026-06-09: fix được lỗi "lag/giãn" giữa câu dài NHƯNG
     làm giọng đều đều, mất ngữ điệu tự nhiên (nghe như AI đọc) -> đã GỠ. Điểm mạnh model là đọc
     NGUYÊN CÂU với prosody tự nhiên. `text_splitter` CHỈ cắt theo `. ! ?` + xuống dòng.
-  - **Lỗi "lag/giãn cục bộ" câu dài = do SAMPLING NGẪU NHIÊN (đã xác nhận 2026-08-17).** Sinh lại CÙNG
-    câu 3 lần ra waveform + khoảng lặng KHÁC nhau mỗi lần (tương quan gần 0), ngắt vụn cuối câu đổi mỗi
-    lần -> KHÔNG phải lỗi hệ thống, không config nào sửa dứt điểm. g-omnivoice cũng bị (không model nào
-    miễn nhiễm). Hướng giảm (nếu cần): num_step cao hơn / "sinh vài lần chọn bản mượt" / knob sampling
-    (guidance_scale, class_temperature). TUYỆT ĐỐI KHÔNG quay lại cắt phẩy. num_step giữ 24 (nghe ổn nhất).
+  - **GIỌNG MẪU QUYẾT ĐỊNH NHỊP ĐỌC - nguyên nhân chính của "khựng" (xác nhận 2026-08-17).**
+    OmniVoice chốt độ dài đầu ra TRƯỚC khi sinh: `số giây = (ký tự câu) x (độ dài mẫu) / (ký tự lời mẫu)`,
+    và KHÔNG có token kết thúc -> buộc phải lấp đầy khung đã cấp. Mẫu nhiều khoảng lặng -> model tưởng
+    người nói chậm -> cấp dư khung -> nhồi khoảng lặng vào giữa câu = tiếng "khựng khựng".
+    => **Giọng mẫu phải nén hết khoảng lặng thừa** (giữ nguyên lời nói thì `ref_text` vẫn khớp).
+    Đo thật: mẫu 14.3s/26% lặng -> 11.8s/0% lặng làm output giảm 33% số chỗ ngắt, giảm gần nửa im lặng.
+    **Lời mẫu phải gõ ĐÚNG TỪNG CHỮ** - thiếu chữ làm phình phi tuyến (gõ đủ 60% -> dư 56% thời gian).
+    Bỏ trống lời mẫu -> Whisper chạy lại cho TỪNG câu (tốn VRAM + sót chữ tiếng Việt).
+  - `position_temperature` (5.0 -> 1.0) KHÔNG cải thiện - đã đo, không phải lever. num_step giữ 24.
+    TUYỆT ĐỐI KHÔNG quay lại cắt phẩy.
+  - **ĐÃ THỬ VÀ LOẠI - đừng mất thời gian làm lại (2026-08-17):** viXTTS (dở hơn), VieNeu-TTS (dở hơn
+    + lệch giọng gốc). Khảo sát GitHub: GPT-SoVITS / IndexTTS / CosyVoice / VibeVoice / MegaTTS3 /
+    Zonos / Spark-TTS / Orpheus **KHÔNG hỗ trợ tiếng Việt**; Chatterbox có mác "vi" nhưng CER 75%
+    (chính nhà phát triển khuyến cáo không dùng); Higgs Audio v3 có tiếng Việt tốt nhưng cần **16GB VRAM**.
+    => g-omnivoice vẫn là lựa chọn tốt nhất cho máy 4GB.
 - Các thay đổi đợt 2026-06-09 (ghép mượt `_join_chunks` + num_step 24; đã revert cắt phẩy) CHƯA push
   lên GitHub - commit mới nhất trên remote vẫn là `2bf9c48`.
