@@ -86,6 +86,8 @@ omnivoice-vietnamese/  (repo GitHub: vietnamese-tts-studio)
 ├── web/                  # FRONTEND: index.html, styles.css, app.js, recorder.js, fonts/*.ttf
 ├── tests/                # test_text_splitter.py (GPU-free) + smoke_e2e.py (GPU thật)
 ├── docs/                 # adr/0001 (tự lấy mẫu) + project-changelog.md
+├── notebooks/            # voxcpm2-kaggle: chạy VoxCPM2 trên GPU Kaggle (NHÁNH SONG SONG,
+│                         # không phải app local - xem changelog 2026-08-18)
 ├── plans/                # plan nội bộ - gitignore, KHÔNG track
 ├── web_server.py         # ENTRY CHÍNH: FastAPI serve web/ + API generate/refs/history/...
 ├── run.py                # CLI mỏng gọi tts_engine

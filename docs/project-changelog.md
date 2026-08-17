@@ -1,5 +1,43 @@
 # Project Changelog
 
+## 2026-08-18 - Notebook Kaggle chạy VoxCPM2 (lựa chọn chất lượng cao, KHÔNG thay app local)
+
+**Thêm `notebooks/voxcpm2-kaggle-clone-giong.ipynb`** - chạy VoxCPM2 trên GPU T4 miễn phí của Kaggle.
+Đây là NHÁNH SONG SONG, không đụng gì tới app local (vẫn dùng g-omnivoice, vẫn offline 100%).
+
+**Vì sao cần:** model local bị giới hạn 4GB VRAM nên chỉ chạy được cỡ 0.6 tỷ tham số. VoxCPM2 là
+2 tỷ tham số, xuất 48kHz, Apache-2.0 (thương mại thoải mái), và người dùng đánh giá giọng hay hơn
+hẳn g-omnivoice. Cần GPU 16GB nên phải chạy trên Kaggle (30 giờ/tuần miễn phí).
+
+**Các bẫy đã xử lý trong notebook (đều tốn thời gian mới tìm ra):**
+- T4 là Turing sm_75 KHÔNG hỗ trợ bf16, mà model mặc định bfloat16 -> phải sửa `config.json` sang
+  float16 TRƯỚC khi nạp. Không sửa thì crash.
+- Cài `--no-deps` (voxcpm kéo theo gradio/funasr/modelscope không dùng tới, cài đủ hỏng môi trường Kaggle).
+- `HF_HOME` phải đặt vào `/kaggle/temp` trước khi import huggingface_hub, tránh ăn hạn mức 20GB.
+- Tự dọn VRAM + tự chọn GPU trống (chạy lại ô nạp model 2 lần là tràn).
+- Lọc tham số theo `inspect.signature` - phiên bản cài thực tế không có `seed` dù tài liệu ghi có.
+
+**Hiểu biết về VoxCPM2 (đọc từ mã nguồn, quan trọng nếu quay lại làm tiếp):**
+- Hai chế độ clone KHÁC HẲN nhau:
+  - `reference_wav_path` một mình = **chất giọng** (audio không có lời thoại đi kèm) + cho phép
+    chỉ thị phong cách `(...)` ở đầu văn bản (phải viết tiếng Anh/Trung).
+  - Thêm `prompt_wav_path` + `prompt_text` = **Ultimate Cloning**: giống giọng nhất NHƯNG sao chép
+    luôn NHỊP ĐIỆU của mẫu, và TẮT chỉ thị phong cách (chỉ thị bị đọc to thành lời).
+- Nhịp đọc đến từ ô `prompt`, chất giọng đến từ ô `reference` - hai ô độc lập trong kiến trúc.
+- KHÔNG có tham số `speed`/`rate`/`tempo`/`duration`, KHÔNG hỗ trợ SSML `<break>`. Xuống dòng bị
+  xóa (`text.replace("\n", " ")`).
+- `normalize=False` là ĐÚNG cho tiếng Việt: bộ chuẩn hóa của nó chọn ngôn ngữ bằng
+  `"zh" if contains_chinese else "en"` -> tiếng Việt rơi vào nhánh tiếng Anh, số bị đọc thành tiếng Anh.
+
+**Cách làm chậm KHÔNG gây méo tiếng (bài học đắt giá):**
+- SAI: kéo giãn tín hiệu giọng mẫu (`librosa.effects.time_stretch`) - phase vocoder tạo tiếng méo,
+  rồi model clone lại luôn cái méo đó. Đã thử, người dùng bác bỏ.
+- ĐÚNG: **chỉ giãn các khoảng LẶNG giữa từ** trong file mẫu, giữ nguyên phần có tiếng.
+  Đã kiểm chứng: 323.569 mẫu khác 0 giống hệt, năng lượng lệch 1e-13 - chỉ thêm số 0 vào nên
+  KHÔNG THỂ gây méo. Notebook có thanh trượt "Giãn lặng mẫu" làm việc này.
+- Cách tốt nhất còn lại (chưa làm): thu 10s đọc chậm làm `prompt` (neo nhịp), giữ file cũ làm
+  `reference` (neo chất giọng) - cùng một người nên chất giọng không đổi.
+
 ## 2026-08-17 (đợt 2) - Ngắt nghỉ theo dấu câu + sửa lỗi cắt câu ở "…"
 
 **Sửa lỗi:**
