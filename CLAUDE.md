@@ -26,14 +26,18 @@ Mục tiêu: nhập văn bản tiếng Việt -> sinh file `.wav`; hoặc đưa 
 | Model VN thay thế (nếu cần so sánh) | https://huggingface.co/splendor1811/omnivoice-vietnamese |
 | App desktop liên quan (cùng hệ OmniVoice) | https://github.com/debpalash/OmniVoice-Studio |
 
-- Model id hardcode trong `run.py`: `MODEL_ID = "kjanh/KhanhTTS-OmniVoice"`.
-- KhanhTTS = fine-tune của OmniVoice trên ~1.500h tiếng Việt + Anh; output 24000 Hz; backbone Qwen3-0.6B.
+- **Model mặc định = `g-group-ai-lab/g-omnivoice`** (đổi 2026-08-17; đọc số/chữ chuẩn hơn). KhanhTTS
+  thành lựa chọn. Danh sách trong `tts_engine.AVAILABLE_MODELS`; chọn qua dropdown UI hoặc `run.py --model`.
+- **g-omnivoice là repo GATED -> cần HuggingFace token.** `hf_token.py` tự tìm token (env HF_TOKEN /
+  `$HF_HOME/token` / `~/.cache/huggingface/token`); UI có ô nhập key khi thiếu (`POST /api/hf-token`).
+  KhanhTTS public, KHÔNG cần token -> dùng làm lựa chọn an toàn khi không có key.
+- KhanhTTS / g-omnivoice đều = fine-tune OmniVoice tiếng Việt; output 24000 Hz; backbone Qwen3-0.6B.
 
 ## Tech stack (phiên bản đã cài, đã verify chạy được)
 
 - Python **3.12.0** (trong `.venv`) - KHÔNG dùng Python 3.14 hệ thống (PyTorch chưa hỗ trợ 3.14).
 - PyTorch **2.8.0+cu128** + torchaudio 2.8.0+cu128 (CUDA 12.8).
-- omnivoice **0.1.5**, transformers 5.10.2, numpy 2.4.6, soundfile 0.14.0.
+- omnivoice **0.2.1** (nâng từ 0.1.5 ngày 2026-08-17), transformers 5.10.2, numpy 2.4.6, soundfile 0.14.0.
 - Web UI chính: **fastapi + uvicorn[standard] + python-multipart** (cài bare vào .venv qua
   `UV_LINK_MODE=copy uv pip install ...`). Frontend là HTML/CSS/JS thuần + font Be Vietnam Pro (local, offline).
 - gradio **6.16.0** (chỉ cho bản UI cũ `app.py`, tùy chọn). Project KHÔNG có pyproject.toml/uv.lock -
@@ -85,9 +89,11 @@ omnivoice-vietnamese/  (repo GitHub: vietnamese-tts-studio)
 ├── plans/                # plan nội bộ - gitignore, KHÔNG track
 ├── web_server.py         # ENTRY CHÍNH: FastAPI serve web/ + API generate/refs/history/...
 ├── run.py                # CLI mỏng gọi tts_engine
-├── tts_engine.py         # lõi model: HF_HOME (đặt đầu file!), load/unload/generate, singleton `engine`
+├── tts_engine.py         # lõi model: HF_HOME (đặt đầu file!), load/unload/generate, đổi model, singleton `engine`
+├── hf_token.py           # tìm/lưu HF token + nhận diện lỗi 401/gated (cho model g-omnivoice)
+├── vietnamese_number_normalizer.py  # nở số/ngày/tiền/% thành chữ tiếng Việt (Miền Bắc) trước khi đọc
 ├── text_splitter.py      # cắt văn bản tiếng Việt thành đoạn (né viết tắt, số thập phân...)
-├── long_text.py          # pipeline văn bản dài: tự lấy mẫu (ADR 0001), ghép đoạn, partial, speed
+├── long_text.py          # pipeline văn bản dài: chuẩn hóa số -> tự lấy mẫu (ADR 0001), ghép đoạn, partial, speed
 ├── history.py            # đặt tên file output (giữ tên gốc), sidecar JSON, liệt kê/xóa
 ├── app.py app_theme.py app_history_tab.py   # bản UI Gradio CŨ (tùy chọn, không phải UI chính)
 ├── start-ui.bat          # double-click chạy web_server.py
@@ -109,3 +115,18 @@ omnivoice-vietnamese/  (repo GitHub: vietnamese-tts-studio)
 - Chưa có: batch nhiều file. (Web UI + đọc văn bản dài đã xong 2026-06-08, xem `docs/project-changelog.md`.)
 - Giọng mặc định KHÔNG ổn định giữa các lần generate -> văn bản dài dùng cơ chế "tự lấy mẫu"
   (đoạn 1 làm giọng mẫu cho các đoạn sau) - xem `docs/adr/0001`. ĐỪNG bỏ cơ chế này khi refactor.
+- **Chất lượng audio văn bản dài (bài học 2026-06-09):**
+  - Ghép đoạn phải MƯỢT: mỗi đoạn model đã tự fade + đệm ~0.1s 2 mép; `long_text._join_chunks` cắt
+    đệm thừa + chuẩn hoá RMS đều + nghỉ ngắn ~0.16s + cross-fade. ĐỪNG chèn lặng thô (gây "khựng").
+  - `num_step` mặc định = 24 (trước 16) cho bớt glitch. Nâng tới 32 KHÔNG tốn thêm VRAM (chỉ chậm
+    hơn) - num_step chỉ là số vòng lặp trên cùng tensor. Thứ ngốn VRAM là ĐỘ DÀI đoạn + clone/Whisper.
+  - **ĐỪNG cắt câu theo dấu phẩy.** Đã thử 2026-06-09: fix được lỗi "lag/giãn" giữa câu dài NHƯNG
+    làm giọng đều đều, mất ngữ điệu tự nhiên (nghe như AI đọc) -> đã GỠ. Điểm mạnh model là đọc
+    NGUYÊN CÂU với prosody tự nhiên. `text_splitter` CHỈ cắt theo `. ! ?` + xuống dòng.
+  - **Lỗi "lag/giãn cục bộ" câu dài = do SAMPLING NGẪU NHIÊN (đã xác nhận 2026-08-17).** Sinh lại CÙNG
+    câu 3 lần ra waveform + khoảng lặng KHÁC nhau mỗi lần (tương quan gần 0), ngắt vụn cuối câu đổi mỗi
+    lần -> KHÔNG phải lỗi hệ thống, không config nào sửa dứt điểm. g-omnivoice cũng bị (không model nào
+    miễn nhiễm). Hướng giảm (nếu cần): num_step cao hơn / "sinh vài lần chọn bản mượt" / knob sampling
+    (guidance_scale, class_temperature). TUYỆT ĐỐI KHÔNG quay lại cắt phẩy. num_step giữ 24 (nghe ổn nhất).
+- Các thay đổi đợt 2026-06-09 (ghép mượt `_join_chunks` + num_step 24; đã revert cắt phẩy) CHƯA push
+  lên GitHub - commit mới nhất trên remote vẫn là `2bf9c48`.

@@ -192,6 +192,21 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .btn-danger:hover { border-color: var(--danger); color: var(--danger); }
 .btn:disabled { opacity: .5; cursor: default; pointer-events: none; }
 
+/* Hàng chọn Model + bật đọc số (ngay dưới ô văn bản) */
+.opt-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px; }
+.opt-model { flex: 1 1 220px; min-width: 200px; }
+.opt-model select { font-size: 14.5px; }
+.opt-normalize { flex: 1 1 240px; padding-bottom: 5px; }
+
+/* Panel nhập HuggingFace key - hiện khi model gated (g-omnivoice) thiếu/sai key */
+.token-card { margin-top: 14px; border: 1px solid var(--warn-border); background: var(--warn-bg); }
+.token-head { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--warn-text); }
+.token-head svg { width: 18px; height: 18px; flex: none; }
+.token-steps { margin: 8px 0 12px 18px; padding: 0; font-size: 13.5px; color: var(--text-2); line-height: 1.75; }
+.token-steps a { color: var(--accent); }
+.token-card .row { gap: 10px; align-items: center; margin-top: 4px; }
+.token-card .btn-primary { width: auto; margin-top: 0; padding: 12px 18px; white-space: nowrap; }
+
 /* Tiến độ */
 .progress { margin-top: 16px; display: none; }
 .progress.show { display: block; animation: fade .25s ease; }

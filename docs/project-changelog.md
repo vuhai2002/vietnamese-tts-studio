@@ -1,5 +1,35 @@
 # Project Changelog
 
+## 2026-08-17 - Nâng engine 0.2.1 + g-omnivoice mặc định + đọc số thành chữ
+
+**Engine:**
+- Nâng `omnivoice` 0.1.5 -> **0.2.1** (chỉ đổi 1 gói, GIỮ NGUYÊN torch 2.8.0+cu128). API 0.2.1:
+  `num_step` chuyển vào generation config (vẫn nhận qua `**kwargs`), thêm `language`, `normalize_text`,
+  `voice_clone_prompt`, `audio_chunk_duration`/`threshold`, `pad_duration`/`fade_duration`.
+
+**Model (đổi mặc định + chọn được):**
+- Mặc định giờ là **`g-group-ai-lab/g-omnivoice`** (đọc số/chữ chuẩn hơn KhanhTTS - WER thấp hơn ~30%
+  theo benchmark tác giả + nghe A/B cùng giọng xác nhận). **KhanhTTS thành lựa chọn** (dropdown UI / `--model`).
+- g-omnivoice là repo **GATED** -> cần HuggingFace token. `hf_token.py` (mới): tìm token (env/file mặc định),
+  lưu token, nhận diện lỗi 401/gated. `tts_engine`: bỏ hardcode MODEL_ID -> `AVAILABLE_MODELS` +
+  `ensure_loaded(model_id)` (đổi model -> reload) + `HfAuthError`.
+- UI: dropdown chọn model + panel nhập HF key khi thiếu/sai key (`POST /api/hf-token`), tự thử lại sau khi lưu.
+  CLI: `--model gomni|khanhtts`. Thiếu key -> báo + hướng dẫn thay vì lỗi khó hiểu.
+
+**Đọc số thành chữ (số tiếng Việt):**
+- `vietnamese_number_normalizer.py` (mới) + `tests/test_vietnamese_number_normalizer.py`: nở số/thập phân/
+  phần trăm/năm thành chữ Miền Bắc. VD `1.250.000` -> "một triệu hai trăm năm mươi nghìn"; `3,5%` -> "ba phẩy
+  năm phần trăm"; `2026` -> "hai nghìn không trăm hai mươi sáu". (`normalize_text` built-in của omnivoice
+  KHÔNG xử lý số tiếng Việt - đã kiểm chứng.)
+- Áp trong `long_text` TRƯỚC khi cắt câu; toggle "Đọc số thành chữ" (mặc định BẬT) + cờ CLI `--no-normalize-numbers`.
+
+**Chất lượng:**
+- `language="Vietnamese"` mặc định trong lời gọi generate (nghe tự nhiên hơn - đã xác nhận).
+- Điều tra lỗi lag câu dài: XÁC NHẬN do **sampling ngẫu nhiên** (3 lần sinh cùng câu ra waveform/khoảng lặng
+  khác nhau), KHÔNG phải lỗi hệ thống -> không config nào sửa dứt điểm; num_step giữ 24.
+
+**Verify:** 32 unit test pass, smoke e2e pass (g-omnivoice), API model/token pass, đổi model g-omnivoice<->KhanhTTS pass.
+
 ## 2026-06-08 - Web UI riêng (FastAPI) + tốc độ đọc + quản lý giọng mẫu
 
 **Thay đổi lớn:**

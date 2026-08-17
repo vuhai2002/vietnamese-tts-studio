@@ -8,6 +8,8 @@ Quy tắc (xem plans/260608-0054-gradio-web-ui/phase-02-text-splitter.md):
   ("3.5" thập phân, "1.000.000" phân cách nghìn kiểu Việt Nam).
 - Gộp đoạn quá ngắn (< min_chars) vào đoạn bên cạnh để khỏi tốn 1 lần generate cho 1-2 từ.
 - Bẻ nhỏ câu quá dài (> max_chars) tại dấu phẩy/khoảng trắng gần cuối (an toàn VRAM 4GB).
+- KHÔNG cắt theo dấu phẩy: để model đọc nguyên câu -> giữ ngữ điệu + nhịp ngắt tự nhiên
+  (đã thử cắt phẩy 2026-06-09 -> nghe đều đều như AI, mất điểm mạnh model -> bỏ).
 - Giữ nguyên 100% dấu tiếng Việt - tuyệt đối không normalize/strip ký tự.
 
 Chỉ dùng stdlib (re) - không kéo thêm nltk/underthesea cho công cụ 1 người dùng.

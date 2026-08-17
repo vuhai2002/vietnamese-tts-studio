@@ -9,7 +9,8 @@ Chạy: uv run python web_server.py  (hoặc double-click start-ui.bat)
 (tts_engine, long_text, history) tái dùng y nguyên từ bản CLI/Gradio.
 """
 import tts_engine  # noqa: F401  (set HF_HOME khi import - giữ dòng này đầu tiên)
-from tts_engine import OUTPUTS_DIR, REFS_DIR, SAMPLE_RATE, engine, pick_device
+from tts_engine import (AVAILABLE_MODELS, DEFAULT_MODEL_ID, OUTPUTS_DIR, REFS_DIR,
+                        SAMPLE_RATE, HfAuthError, engine, pick_device)
 
 import os
 import re
@@ -25,6 +26,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+import hf_token
 import history
 import long_text
 
@@ -51,6 +53,29 @@ def list_refs() -> list[str]:
 @app.get("/api/refs")
 async def api_refs():
     return {"refs": list_refs()}
+
+
+@app.get("/api/models")
+async def api_models():
+    """Danh sách model chọn được + model mặc định + model nào cần HF token."""
+    models = [{"id": mid, "label": info["label"], "gated": info["gated"]}
+              for mid, info in AVAILABLE_MODELS.items()]
+    return {"models": models, "default": DEFAULT_MODEL_ID, "has_token": hf_token.has_token()}
+
+
+@app.get("/api/hf-token")
+async def api_hf_token_status():
+    return {"has_token": hf_token.has_token(), "help_url": hf_token.TOKEN_HELP_URL}
+
+
+@app.post("/api/hf-token")
+async def api_hf_token_save(token: str = Form(...)):
+    """Lưu HF token do user nhập trên UI (dùng cho model gated g-omnivoice)."""
+    try:
+        hf_token.save_token(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True, "has_token": True}
 
 
 @app.get("/api/progress")
@@ -131,14 +156,17 @@ async def api_generate(
     text: str = Form(...),
     ref_name: str = Form(""),
     ref_text: str = Form(""),
-    steps: int = Form(16),
+    steps: int = Form(24),
     speed: float = Form(1.0),
     use_cpu: bool = Form(False),
+    model_id: str = Form(""),
+    normalize_numbers: bool = Form(True),
     ref_file: UploadFile | None = File(None),
 ):
     text = text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Hãy nhập văn bản cần đọc.")
+    model_id = model_id if model_id in AVAILABLE_MODELS else DEFAULT_MODEL_ID
     if not _gen_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="Đang sinh âm thanh khác, vui lòng đợi.")
 
@@ -155,11 +183,21 @@ async def api_generate(
                 ref_audio = str(candidate)
 
         device, dtype = pick_device(bool(use_cpu))
-        result = await run_in_threadpool(
-            long_text.generate_long, text, ref_audio,
-            (ref_text.strip() or None) if ref_audio else None,
-            int(steps), device, dtype, _set_progress, float(speed),
-        )
+        try:
+            result = await run_in_threadpool(
+                long_text.generate_long, text, ref_audio,
+                (ref_text.strip() or None) if ref_audio else None,
+                int(steps), device, dtype, _set_progress, float(speed),
+                model_id, tts_engine.DEFAULT_LANGUAGE, bool(normalize_numbers),
+            )
+        except HfAuthError as exc:
+            raise HTTPException(status_code=401, detail={
+                "code": "hf_auth",
+                "message": f"Model gated cần HuggingFace token. Nhập token bên dưới, "
+                           "hoặc chuyển sang model KhanhTTS (không cần key).",
+                "help_url": hf_token.TOKEN_HELP_URL,
+                "model": exc.model_id,
+            })
         if result["audio"] is None:
             raise HTTPException(status_code=500,
                                 detail=f"Lỗi ngay đoạn 1/{result['n_chunks']} (hết VRAM?). "
@@ -169,7 +207,8 @@ async def api_generate(
         sf.write(str(wav_path), result["audio"], SAMPLE_RATE)
         history.write_sidecar(json_path, {
             "text": text, "ref_voice": ref_audio, "ref_text": ref_text.strip() or None,
-            "steps": int(steps), "speed": float(speed), "device": device,
+            "steps": int(steps), "speed": float(speed), "device": device, "model": model_id,
+            "normalize_numbers": bool(normalize_numbers),
             "created": datetime.now().isoformat(timespec="seconds"),
             "sample_rate": SAMPLE_RATE, "n_chunks": result["n_chunks"],
             "partial": result["partial"], "failed_at": result["failed_at"], "wav": wav_path.name,

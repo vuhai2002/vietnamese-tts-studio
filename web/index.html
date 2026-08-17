@@ -22,6 +22,8 @@
           <li>Bài dài tự cắt câu rồi ghép thành <b>một file liền mạch</b>, một giọng.</li>
           <li>Kết quả: file <b>.wav 24kHz</b> trong thư mục <b>outputs/</b> (kèm .json thông số).</li>
           <li>Lần đầu tải model <b>~3GB</b> (chờ 30-60 giây), các lần sau gần như tức thì.</li>
+          <li><b>Model</b>: g-omnivoice (mặc định, đọc số/chữ tốt hơn - cần key HF) hoặc KhanhTTS (không cần key).</li>
+          <li><b>Đọc số thành chữ</b>: bật để "1.250.000" đọc thành "một triệu hai trăm năm mươi nghìn".</li>
         </ul>
       </section>
       <section>
@@ -43,7 +45,7 @@
       <section>
         <h4>Số bước (độ mượt)</h4>
         <ul>
-          <li>Dải <b>8 - 32</b>, mặc định <b>16</b>.</li>
+          <li>Dải <b>8 - 32</b>, mặc định <b>24</b>.</li>
           <li>Nhiều bước = mượt hơn nhưng <b>chậm + tốn VRAM</b> hơn.</li>
         </ul>
       </section>
@@ -94,6 +96,34 @@
             <label class="label" for="text">Văn bản cần đọc</label>
             <textarea id="text" placeholder="Nhập một câu, hoặc dán cả bài viết tiếng Việt - bài dài sẽ tự cắt câu và ghép thành một file liền mạch..."></textarea>
             <div class="composer-foot"><span class="hint" id="counter">0 ký tự</span></div>
+          </div>
+
+          <div class="opt-row">
+            <div class="opt-model">
+              <label class="label" for="modelSelect">Model</label>
+              <select id="modelSelect"></select>
+            </div>
+            <label class="switch opt-normalize">
+              <input type="checkbox" id="normalizeNumbers" checked><span class="track"></span>
+              <span>Đọc số thành chữ <span class="hint">(1.250.000 -&gt; một triệu...)</span></span>
+            </label>
+          </div>
+
+          <div class="card token-card" id="tokenPanel" hidden>
+            <div class="token-head">
+              <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M12 3l7 4v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V7l7-4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Cần key HuggingFace cho model g-omnivoice
+            </div>
+            <p class="hint" id="tokenMsg">Model g-omnivoice là repo riêng (gated) nên cần key HuggingFace để tải.</p>
+            <ol class="token-steps">
+              <li>Tạo token loại <b>Read</b> tại <a id="tokenLink" href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">huggingface.co/settings/tokens</a>.</li>
+              <li>Bấm chấp nhận điều khoản tại <a href="https://huggingface.co/g-group-ai-lab/g-omnivoice" target="_blank" rel="noopener">trang model g-omnivoice</a>.</li>
+              <li>Dán token vào ô dưới rồi bấm <b>Lưu key</b> (hoặc đổi sang model KhanhTTS - không cần key).</li>
+            </ol>
+            <div class="row">
+              <input type="password" id="tokenInput" class="grow" placeholder="hf_..." autocomplete="off">
+              <button class="btn-primary" id="saveTokenBtn">Lưu key</button>
+            </div>
           </div>
 
           <details id="voicePanel">
@@ -171,9 +201,9 @@
                 <label class="label">Số bước <span class="hint">(ít: nhanh - nhiều: mượt hơn)</span></label>
                 <div class="range-wrap">
                   <span class="hint">8</span>
-                  <input type="range" id="steps" min="8" max="32" step="1" value="16">
+                  <input type="range" id="steps" min="8" max="32" step="1" value="24">
                   <span class="hint">32</span>
-                  <span class="range-val" id="stepsVal">16</span>
+                  <span class="range-val" id="stepsVal">24</span>
                 </div>
               </div>
               <label class="switch">

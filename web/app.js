@@ -160,7 +160,7 @@ function pollProgress() {
 }
 function stopPoll() { clearInterval(pollTimer); pollTimer = null; }
 
-$("goBtn").onclick = async () => {
+async function generate() {
   const text = $("text").value.trim();
   if (!text) { toast("Hãy nhập văn bản cần đọc.", true); return; }
 
@@ -170,6 +170,8 @@ $("goBtn").onclick = async () => {
   fd.append("steps", $("steps").value);
   fd.append("speed", $("speedSel").value);
   fd.append("use_cpu", $("useCpu").checked);
+  fd.append("model_id", $("modelSelect").value);
+  fd.append("normalize_numbers", $("normalizeNumbers").checked);
   if (currentFile) fd.append("ref_file", currentFile, currentFile.name || "ref.wav");
   else fd.append("ref_name", $("refSelect").value);
 
@@ -183,7 +185,13 @@ $("goBtn").onclick = async () => {
   try {
     const r = await fetch("/api/generate", { method: "POST", body: fd });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.detail || "Lỗi không rõ.");
+    // Model gated thiếu key -> hiện panel nhập key thay vì báo lỗi chung.
+    if (r.status === 401 && data.detail && data.detail.code === "hf_auth") {
+      showTokenPanel(data.detail);
+      return;
+    }
+    if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : "Lỗi không rõ.");
+    hideTokenPanel();
     showResult(data);
   } catch (err) {
     toast(err.message || "Sinh âm thanh thất bại.", true);
@@ -192,6 +200,42 @@ $("goBtn").onclick = async () => {
     $("progress").classList.remove("show");
     $("goBtn").disabled = false;
   }
+}
+$("goBtn").onclick = generate;
+
+/* ---------- Model + HuggingFace key ---------- */
+async function loadModels() {
+  try {
+    const { models, default: def } = await (await fetch("/api/models")).json();
+    $("modelSelect").innerHTML = models.map((m) =>
+      `<option value="${m.id}"${m.id === def ? " selected" : ""}>${m.label}</option>`).join("");
+  } catch { /* offline / chưa sẵn sàng - bỏ qua */ }
+}
+
+function showTokenPanel(detail) {
+  if (detail && detail.message) $("tokenMsg").textContent = detail.message;
+  if (detail && detail.help_url) $("tokenLink").href = detail.help_url;
+  $("tokenPanel").hidden = false;
+  $("tokenPanel").scrollIntoView({ behavior: "smooth", block: "center" });
+  $("tokenInput").focus();
+}
+function hideTokenPanel() { $("tokenPanel").hidden = true; }
+
+$("saveTokenBtn").onclick = async () => {
+  const token = $("tokenInput").value.trim();
+  if (!token) { toast("Hãy dán token vào ô trước.", true); return; }
+  const fd = new FormData();
+  fd.append("token", token);
+  $("saveTokenBtn").disabled = true;
+  try {
+    const r = await fetch("/api/hf-token", { method: "POST", body: fd });
+    if (!r.ok) throw new Error();
+    $("tokenInput").value = "";
+    hideTokenPanel();
+    toast("Đã lưu key. Đang thử đọc lại...");
+    generate();  // tự thử lại ngay
+  } catch { toast("Không lưu được key.", true); }
+  finally { $("saveTokenBtn").disabled = false; }
 };
 
 function showResult(data) {
@@ -300,6 +344,7 @@ function escapeHtml(s) {
 /* ---------- Khởi tạo ---------- */
 initTheme();
 loadRefs();
+loadModels();
 if (new URLSearchParams(location.search).get("tab") === "history") {
   document.querySelector('.tab[data-view="history"]').click();
 }
